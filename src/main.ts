@@ -1,7 +1,4 @@
 import './style.css'
-import typescriptLogo from './typescript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter.ts'
 import { convert_image } from 'amogus'
 
 document.querySelector('#process-button')!.addEventListener('click', async () => {

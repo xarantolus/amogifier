@@ -1,18 +1,10 @@
-use std::cell::RefCell;
 use std::io::Cursor;
-use std::rc::Rc;
 
 use image::DynamicImage;
 use image::GenericImageView as _;
 use image::ImageBuffer;
 use image::Rgba;
-use js_sys::Promise;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use js_sys::Uint8Array;
-use wasm_bindgen_futures::JsFuture;
-use web_sys::File;
-use web_sys::FileReader;
 
 fn amogify(img: &DynamicImage) -> DynamicImage {
     let (img_width, img_height) = img.dimensions();
@@ -77,8 +69,6 @@ fn amogify(img: &DynamicImage) -> DynamicImage {
     DynamicImage::ImageRgba8(imgbuf)
 }
 
-
-
 #[wasm_bindgen]
 pub struct ConvertedImage {
     preview: Vec<u8>,
@@ -105,7 +95,8 @@ impl ConvertedImage {
 
 #[wasm_bindgen]
 pub fn convert_image(bytes: Vec<u8>) -> Result<ConvertedImage, JsValue> {
-    let input_image: DynamicImage = image::load_from_memory(&bytes).or_else(|e| Err(JsValue::from_str(&format!("{:?}", e))))?;
+    let input_image: DynamicImage =
+        image::load_from_memory(&bytes).or_else(|e| Err(JsValue::from_str(&format!("{:?}", e))))?;
     let amogus_image = amogify(&input_image);
 
     let mut output = Vec::new();
