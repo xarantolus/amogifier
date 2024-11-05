@@ -24,8 +24,6 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -93,4 +91,23 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+#image-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: 70vh;
+}
+
+#preview-image, #full-image {
+  max-width: 100%;
+  object-fit: contain;
+  margin: 10px 0;
+}
+
+/* Size up the preview image so it is actually visible */
+#preview-image {
+  width: 100%;
+  image-rendering: pixelated; /* Ensures no interpolation between pixels */
 }

@@ -1,16 +1,26 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
-  </head>
-  <body>
-    <div id="app">
-      <input type="file" id="file-input" />
-      <button id="process-button">Process</button>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Amogifier</title>
+</head>
+
+<body>
+  <div id="app">
+    <input type="file" id="file-input" />
+    <button id="process-button">Process</button>
+
+    <br>
+
+    <div id="image-container">
+      <img id="preview-image" />
+      <img id="full-image" />
     </div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
 </html>

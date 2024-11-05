@@ -20,6 +20,7 @@ wasm-bindgen = "0.2.84"
 console_error_panic_hook = { version = "0.1.7", optional = true }
 js-sys = "0.3.72"
 wasm-bindgen-futures = "0.4.45"
+image = { version = "0.25.0", features = ["png", "jpeg", "avif", "webp"] }
 
 [dependencies.web-sys]
 version = "0.3.72"

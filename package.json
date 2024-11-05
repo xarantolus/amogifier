@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "amogus": "file:amogus/pkg-release",
+    "sus": "file:",
     "vite-plugin-wasm": "^3.3.0"
   }
 }
