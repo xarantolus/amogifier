@@ -1,6 +1,7 @@
 .PHONY: debug release clean all web watch build-web
 
 build-web: release
+	npm install
 	npm run build
 
 
