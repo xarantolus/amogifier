@@ -4,7 +4,17 @@ use image::DynamicImage;
 use image::GenericImageView as _;
 use image::ImageBuffer;
 use image::Rgba;
+use rexif::ExifTag;
 use wasm_bindgen::prelude::*;
+
+fn rotate_image(img: DynamicImage, orientation: u16) -> DynamicImage {
+    match orientation {
+        3 => img.rotate180(),
+        6 => img.rotate90(),
+        8 => img.rotate270(),
+        _ => img,
+    }
+}
 
 fn amogify(img: &DynamicImage) -> DynamicImage {
     let (img_width, img_height) = img.dimensions();
@@ -97,7 +107,22 @@ impl ConvertedImage {
 pub fn convert_image(bytes: Vec<u8>) -> Result<ConvertedImage, JsValue> {
     let input_image: DynamicImage =
         image::load_from_memory(&bytes).or_else(|e| Err(JsValue::from_str(&format!("{:?}", e))))?;
-    let amogus_image = amogify(&input_image);
+
+    // Not all files have exif data
+    let orientation = match rexif::parse_buffer(&bytes) {
+        Ok(exif_data) => exif_data
+            .entries
+            .iter()
+            .find(|entry| entry.tag == ExifTag::Orientation)
+            .and_then(|entry| entry.value.to_i64(0))
+            .unwrap_or(1),
+        Err(e) => 1,
+    };
+
+    // Rotate the image based on the orientation
+    let rotated_image = rotate_image(input_image, orientation.min(u16::MAX as i64) as u16);
+
+    let amogus_image = amogify(&rotated_image);
 
     let mut output = Vec::new();
     {
@@ -107,11 +132,13 @@ pub fn convert_image(bytes: Vec<u8>) -> Result<ConvertedImage, JsValue> {
             .or_else(|e| Err(JsValue::from_str(&format!("{:?}", e))))?;
     }
 
-    // Create the top-left 50x50 pixels image
+    // Create the middle 200x25 pixels image
     let (width, height) = amogus_image.dimensions();
     let crop_width = std::cmp::min(200, width);
     let crop_height = std::cmp::min(25, height);
-    let cropped_image = amogus_image.crop_imm(0, 0, crop_width, crop_height);
+    let crop_x = (width - crop_width) / 2;
+    let crop_y = (height - crop_height) / 2;
+    let cropped_image = amogus_image.crop_imm(crop_x, crop_y, crop_width, crop_height);
 
     let mut cropped_output = Vec::new();
     {
