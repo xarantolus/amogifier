@@ -6,19 +6,37 @@
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Image Amogifier</title>
+  <style>
+    #image-container {
+      position: relative;
+      width: 90%;
+      /* max-width: 1200px; */
+      text-align: center;
+    }
+
+    #image-container img {
+      width: 100%;
+      display: block;
+    }
+  </style>
 </head>
 
 <body>
+
   <div id="app">
+    <h1>Image Amogifier</h1>
+    <p>
+      Select an image to amogify it. Files are processed client-side and never leave your device.
+    </p>
     <input type="file" id="file-input" />
     <button id="process-button">Process</button>
-
-    <br>
+    <p id="error-msg"></p>
 
     <div id="image-container">
       <img id="preview-image" />
       <img id="full-image" />
     </div>
+
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>

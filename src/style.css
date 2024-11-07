@@ -94,10 +94,7 @@ button:focus-visible {
 }
 
 #image-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-height: 70vh;
+  margin: 0 auto;
 }
 
 #preview-image, #full-image {
@@ -110,4 +107,8 @@ button:focus-visible {
 #preview-image {
   width: 100%;
   image-rendering: pixelated; /* Ensures no interpolation between pixels */
+}
+
+#error-msg {
+  color: #ff0000;
 }
