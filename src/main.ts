@@ -1,5 +1,3 @@
-import './style.css'
-
 function displayError(message: string | null) {
     const errorElement = document.querySelector('#error-msg') as HTMLElement;
     errorElement.textContent = message ?? '';
