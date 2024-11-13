@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Cursor;
 
 use image::DynamicImage;
@@ -16,6 +17,22 @@ fn rotate_image(img: DynamicImage, orientation: u16) -> DynamicImage {
     }
 }
 
+fn color_distance(c1: Rgba<u8>, c2: Rgba<u8>) -> f64 {
+    let dr = c1[0] as f64 - c2[0] as f64;
+    let dg = c1[1] as f64 - c2[1] as f64;
+    let db = c1[2] as f64 - c2[2] as f64;
+    let da = c1[3] as f64 - c2[3] as f64;
+    (dr * dr + dg * dg + db * db + da * da).sqrt()
+}
+
+fn adjust_color(color: Rgba<u8>) -> Rgba<u8> {
+    let mut new_color = color;
+    new_color[0] = new_color[0].saturating_add(8);
+    new_color[1] = new_color[1].saturating_add(8);
+    new_color[2] = new_color[2].saturating_add(8);
+    new_color
+}
+
 fn amogify(img: &DynamicImage) -> DynamicImage {
     let (img_width, img_height) = img.dimensions();
 
@@ -31,23 +48,45 @@ fn amogify(img: &DynamicImage) -> DynamicImage {
 
     for x in (0..img_width - 3).step_by(4) {
         for y in (0..img_height - 4).step_by(5) {
-            let mut colors = [None; 2];
-            let mut color_count = 0;
+            let mut color_counts: HashMap<Rgba<u8>, usize> = HashMap::new();
 
             for xx in 0..4 {
                 for yy in 0..5 {
                     let pixel = img.get_pixel(x + xx, y + yy);
-                    if !colors.contains(&Some(pixel)) {
-                        if color_count < 2 {
-                            colors[color_count] = Some(pixel);
-                            color_count += 1;
-                        }
-                    }
+                    *color_counts.entry(pixel).or_insert(0) += 1;
                 }
             }
 
-            let top_color = colors[0].unwrap();
-            let second_color = colors[1].unwrap_or(Rgba([255, 255, 255, 255]));
+            let mut sorted_colors: Vec<(Rgba<u8>, usize)> = color_counts.into_iter().collect();
+            sorted_colors.sort_by(|a, b| b.1.cmp(&a.1));
+
+            let mut selected_colors = Vec::new();
+            for (color, _) in sorted_colors {
+                if selected_colors.is_empty()
+                    || selected_colors
+                        .iter()
+                        .all(|&c| color_distance(c, color) > 50.0)
+                {
+                    selected_colors.push(color);
+                } else if selected_colors
+                    .iter()
+                    .any(|&c| color_distance(c, color) <= 50.0)
+                {
+                    selected_colors.push(adjust_color(color));
+                }
+                if selected_colors.len() >= 2 {
+                    break;
+                }
+            }
+
+            let top_color = selected_colors
+                .get(0)
+                .cloned()
+                .unwrap_or(Rgba([255, 255, 255, 255]));
+            let second_color = match selected_colors.get(1).cloned() {
+                Some(color) => color,
+                None => adjust_color(top_color),
+            };
 
             // Set the top 2 colors to the output image
             // First column
@@ -116,7 +155,7 @@ pub fn convert_image(bytes: Vec<u8>) -> Result<ConvertedImage, JsValue> {
             .find(|entry| entry.tag == ExifTag::Orientation)
             .and_then(|entry| entry.value.to_i64(0))
             .unwrap_or(1),
-        Err(e) => 1,
+        Err(_) => 1,
     };
 
     // Rotate the image based on the orientation
