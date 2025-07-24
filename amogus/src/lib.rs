@@ -5,6 +5,8 @@ use image::DynamicImage;
 use image::GenericImageView as _;
 use image::ImageBuffer;
 use image::Rgba;
+use image::codecs::gif::{GifDecoder, GifEncoder};
+use image::{AnimationDecoder, Frame};
 use rexif::ExifTag;
 use wasm_bindgen::prelude::*;
 
@@ -122,13 +124,14 @@ fn amogify(img: &DynamicImage) -> DynamicImage {
 pub struct ConvertedImage {
     preview: Vec<u8>,
     full: Vec<u8>,
+    is_animated: bool,
 }
 
 #[wasm_bindgen]
 impl ConvertedImage {
     #[wasm_bindgen(constructor)]
-    pub fn new(preview: Vec<u8>, full: Vec<u8>) -> ConvertedImage {
-        ConvertedImage { preview, full }
+    pub fn new(preview: Vec<u8>, full: Vec<u8>, is_animated: bool) -> ConvertedImage {
+        ConvertedImage { preview, full, is_animated }
     }
 
     #[wasm_bindgen(getter)]
@@ -140,10 +143,89 @@ impl ConvertedImage {
     pub fn full(&self) -> Vec<u8> {
         self.full.clone()
     }
+
+    #[wasm_bindgen(getter)]
+    pub fn is_animated(&self) -> bool {
+        self.is_animated
+    }
+}
+
+fn is_gif(bytes: &[u8]) -> bool {
+    bytes.len() >= 6 && &bytes[0..6] == b"GIF87a" || &bytes[0..6] == b"GIF89a"
+}
+
+fn convert_gif(bytes: &[u8]) -> Result<ConvertedImage, JsValue> {
+    let cursor = Cursor::new(bytes);
+    let decoder = GifDecoder::new(cursor)
+        .map_err(|e| JsValue::from_str(&format!("Failed to decode GIF: {:?}", e)))?;
+
+    let frames = decoder.into_frames()
+        .collect_frames()
+        .map_err(|e| JsValue::from_str(&format!("Failed to collect frames: {:?}", e)))?;
+
+    if frames.is_empty() {
+        return Err(JsValue::from_str("No frames found in GIF"));
+    }
+
+    let first_frame = &frames[0];
+    let (width, height) = first_frame.buffer().dimensions();
+
+    // Convert each frame
+    let mut converted_frames = Vec::new();
+    for frame in frames {
+        let frame_image = DynamicImage::ImageRgba8(frame.buffer().clone());
+        let amogified = amogify(&frame_image);
+
+        // Create new frame with same delay
+        let delay = frame.delay();
+        let new_frame = Frame::from_parts(
+            amogified.to_rgba8(),
+            0, 0,
+            delay
+        );
+        converted_frames.push(new_frame);
+    }
+
+    // Encode as GIF
+    let mut output = Vec::new();
+    {
+        let mut cursor = Cursor::new(&mut output);
+        let mut encoder = GifEncoder::new(&mut cursor);
+        encoder.set_repeat(image::codecs::gif::Repeat::Infinite)
+            .map_err(|e| JsValue::from_str(&format!("Failed to set repeat: {:?}", e)))?;
+
+        for frame in &converted_frames {
+            encoder.encode_frame(frame.clone())
+                .map_err(|e| JsValue::from_str(&format!("Failed to encode frame: {:?}", e)))?;
+        }
+    }
+
+    // Create preview from first frame
+    let first_amogified = DynamicImage::ImageRgba8(converted_frames[0].buffer().clone());
+    let crop_width = std::cmp::min(200, width);
+    let crop_height = std::cmp::min(25, height);
+    let crop_x = (width - crop_width) / 2;
+    let crop_y = (height - crop_height) / 2;
+    let cropped_image = first_amogified.crop_imm(crop_x, crop_y, crop_width, crop_height);
+
+    let mut cropped_output = Vec::new();
+    {
+        let mut cursor = Cursor::new(&mut cropped_output);
+        cropped_image
+            .write_to(&mut cursor, image::ImageFormat::Png)
+            .map_err(|e| JsValue::from_str(&format!("Failed to write preview: {:?}", e)))?;
+    }
+
+    Ok(ConvertedImage::new(cropped_output, output, true))
 }
 
 #[wasm_bindgen]
 pub fn convert_image(bytes: Vec<u8>) -> Result<ConvertedImage, JsValue> {
+    // Check if it's a GIF
+    if is_gif(&bytes) {
+        return convert_gif(&bytes);
+    }
+
     let input_image: DynamicImage =
         image::load_from_memory(&bytes).or_else(|e| Err(JsValue::from_str(&format!("{:?}", e))))?;
 
@@ -187,5 +269,5 @@ pub fn convert_image(bytes: Vec<u8>) -> Result<ConvertedImage, JsValue> {
             .or_else(|e| Err(JsValue::from_str(&format!("{:?}", e))))?;
     }
 
-    Ok(ConvertedImage::new(cropped_output, output))
+    Ok(ConvertedImage::new(cropped_output, output, false))
 }
